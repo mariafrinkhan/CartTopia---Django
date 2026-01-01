@@ -58,3 +58,7 @@ $(document).ready(function() {
 }); 
 // jquery end
 
+setTimeout(function () {
+    $('.alert').not('.no-autoclose').alert('close');
+}, 4000);
+

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<section class="section-content padding-y">
+    <div class="container">
+        <div class="card mx-auto mt-5" style="max-width: 700px;">
+            <div class="card-body">
+                {% include 'includes/alerts.html' %}
+                <h4 class="card-title mb-4 text-center">Sign Up</h4>
+
+                <form action="{% url 'register' %}" method="POST">
+                    {% csrf_token %}
+
+                    <!-- Row 1 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.first_name.label_tag }}
+                            {{ form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.last_name.label_tag }}
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+
+                    <!-- Row 2 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.email.label_tag }}
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.phone_number.label_tag }}
+                            {{ form.phone_number }}
+                        </div>
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.password.label_tag }}
+                            {{ form.password }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.confirm_password.label_tag }}
+                            {{ form.confirm_password }}
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            Register
+                        </button>
+                    </div>
+                    {{form.email.errors}}
+                    {{form.non_field_errors}}
+                </form>
+
+                <p class="text-center mt-4">
+                    Have an account? <a href="{% url 'login' %}">Log In</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
