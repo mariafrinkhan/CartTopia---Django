@@ -2,43 +2,55 @@ from django.db import models
 from django.urls import reverse
 from category.models import Category
 from accounts.models import Account
-from django.db.models import Avg, Count
-from django.db.models import UniqueConstraint
+from django.db.models import Avg, Count, UniqueConstraint
 from django.db.models.functions import Lower
+from decimal import Decimal
 
-# Create your models here.
+
 class Product(models.Model):
     product_name = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=200, unique=True)
     description = models.TextField(max_length=500, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    images = models.ImageField(upload_to='photos/products', blank=True)
+    discount_percent = models.PositiveIntegerField(default=0)
+    images = models.ImageField(upload_to="photos/products", blank=True)
     stock = models.IntegerField()
     is_available = models.BooleanField(default=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
+    def get_discounted_price(self):
+        """Calculate discounted price dynamically"""
+        if self.discount_percent > 0:
+            discount_multiplier = Decimal(1) - (Decimal(self.discount_percent) / Decimal(100))
+            return self.price * discount_multiplier
+        return self.price
+
     def get_url(self):
-        return reverse('product_detail', args=[self.category.slug, self.slug])
+        return reverse("product_detail", args=[self.category.slug, self.slug])
 
     def __str__(self):
         return self.product_name
-    
+
     def averageReview(self):
-        reviews = ReviewRating.objects.filter(product=self, status=True).aggregate(average=Avg('rating'))
+        reviews = ReviewRating.objects.filter(product=self, status=True).aggregate(
+            average=Avg("rating")
+        )
         avg = 0
-        if reviews['average'] is not None:
-            avg = float(reviews['average'])
+        if reviews["average"] is not None:
+            avg = float(reviews["average"])
         return avg
 
     def countReview(self):
-        reviews = ReviewRating.objects.filter(product=self, status=True).aggregate(count=Count('id'))
+        reviews = ReviewRating.objects.filter(product=self, status=True).aggregate(
+            count=Count("id")
+        )
         count = 0
-        if reviews['count'] is not None:
-            count = int(reviews['count'])
+        if reviews["count"] is not None:
+            count = int(reviews["count"])
         return count
-    
+
     def save(self, *args, **kwargs):
         self.is_available = bool(self.stock and self.stock > 0)
         super().save(*args, **kwargs)
@@ -46,56 +58,47 @@ class Product(models.Model):
 
 class VariationManager(models.Manager):
     def colors(self):
-        return super(VariationManager, self).filter(variation_category='color', is_active=True)        
-    def sizes(self):
-        return super(VariationManager, self).filter(variation_category='size', is_active=True)      
+        return super(VariationManager, self).filter(
+            variation_category="color", is_active=True
+        )
 
-    
-    
+    def sizes(self):
+        return super(VariationManager, self).filter(
+            variation_category="size", is_active=True
+        )
+
+
 variation_category_choice = (
-    ('color', 'color'),
-    ('size', 'size'),
+    ("color", "color"),
+    ("size", "size"),
 )
 
 
 class Variation(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    variation_category = models.CharField(max_length=100, choices=variation_category_choice)
+    variation_category = models.CharField(
+        max_length=100, choices=variation_category_choice
+    )
     variation_value = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
     created_date = models.DateTimeField(auto_now=True)
 
-    objects= VariationManager()  
+    objects = VariationManager()
 
     class Meta:
         constraints = [
             UniqueConstraint(
-                Lower('variation_value'),
-                'product',
-                'variation_category',
-                name='unique_variation_value_per_product_and_category'
+                Lower("variation_value"),
+                "product",
+                "variation_category",
+                name="unique_variation_value_per_product_and_category",
             )
         ]
 
     def __str__(self):
         return self.variation_value
 
-# class Variation(models.Model):
-#     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variations')
-#     variation_category = models.CharField(max_length=100, choices=variation_category_choice)
-#     variation_value = models.CharField(max_length=100)
-#     stock = models.PositiveIntegerField(default=0)  # <-- stock per variation
-#     is_active = models.BooleanField(default=True)
-#     created_date = models.DateTimeField(auto_now=True)
 
-#     objects = VariationManager()
-
-#     class Meta:
-#         unique_together = ('product', 'variation_category', 'variation_value')  # no duplicates
-
-#     def __str__(self):
-#         return f"{self.product.product_name} - {self.variation_category}: {self.variation_value}"
-    
 class ReviewRating(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     user = models.ForeignKey(Account, on_delete=models.CASCADE)
@@ -109,14 +112,15 @@ class ReviewRating(models.Model):
 
     def __str__(self):
         return self.subject
-    
+
+
 class ProductGallery(models.Model):
     product = models.ForeignKey(Product, default=None, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='store/products', max_length=255)
+    image = models.ImageField(upload_to="store/products", max_length=255)
 
     def __str__(self):
         return self.product.product_name
 
     class Meta:
-        verbose_name = 'productgallery'
-        verbose_name_plural = 'product gallery'
+        verbose_name = "productgallery"
+        verbose_name_plural = "product gallery"

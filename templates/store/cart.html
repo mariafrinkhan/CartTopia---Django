@@ -79,11 +79,30 @@
                         </div> <!-- col.// -->
                       </td>
                       <td>
-                        <div class="price-wrap">
-                          <var class="price">TK. {{ cart_item.sub_total }}</var>
-                          <small class="text-muted">TK. {{ cart_item.product.price }} each</small>
-                        </div> <!-- price-wrap .// -->
-                      </td>
+  <div class="price-wrap">
+    <var class="price">
+      TK. {{ cart_item.sub_total|floatformat:2 }}
+    </var>
+
+    {% if cart_item.product.discount_percent > 0 %}
+      <small class="text-muted">
+        <span style="color:red; text-decoration: line-through; font-size: 0.85em;">
+          TK. {{ cart_item.product.price|floatformat:2 }}
+        </span>
+        →
+        <span style="color:green; font-weight:600;">
+          TK. {{ cart_item.discounted_price|floatformat:2 }} (each)
+        </span>
+        ({{ cart_item.product.discount_percent }}% OFF)
+      </small>
+    {% else %}
+      <small class="text-muted">
+        TK. {{ cart_item.product.price|floatformat:2 }} each
+      </small>
+    {% endif %}
+  </div>
+</td>
+
                       <td class="text-right">
                         <a href="{% url 'remove_cart_item' cart_item.product.id cart_item.id %}" onclick="return confirm('Are you sure you want to delete this item?')" class="btn btn-danger">Remove</a>
                       </td>
@@ -97,18 +116,40 @@
             <div class="card">
               <div class="card-body">
                 <dl class="dlist-align">
-                  <dt>Total price:</dt>
-                  <dd class="text-right">TK. {{ total }}</dd>
-                </dl>
-                <dl class="dlist-align">
-                  <dt>Tax:</dt>
-                  <dd class="text-right">TK. {{ tax }}</dd>
-                </dl>
-                
-                <dl class="dlist-align">
-                  <dt>Grand Total:</dt>
-                  <dd class="text-right text-dark b"><strong>TK. {{ grand_total }}</strong></dd>
-                </dl>
+    <dt>Subtotal:</dt>
+    <dd class="text-right">TK. {{ total|floatformat:2 }}</dd>
+</dl>
+
+{% if discount_total and discount_total > 0 %}
+<dl class="dlist-align">
+    <dt>Savings:</dt>
+    <dd class="text-right text-success">
+        − TK. {{ discount_total|floatformat:2 }}
+    </dd>
+</dl>
+{% endif %}
+
+<dl class="dlist-align">
+    <dt>Tax (2%):</dt>
+    <dd class="text-right">TK. {{ tax|floatformat:2 }}</dd>
+</dl>
+
+{% if delivery_charge %}
+<dl class="dlist-align">
+    <dt>Delivery Charge:</dt>
+    <dd class="text-right">TK. {{ delivery_charge|floatformat:2 }}</dd>
+</dl>
+{% endif %}
+
+<hr>
+
+<dl class="dlist-align">
+    <dt><strong>Grand Total:</strong></dt>
+    <dd class="text-right text-dark b">
+        <strong>TK. {{ grand_total|floatformat:2 }}</strong>
+    </dd>
+</dl>
+
                 <hr />
                 
                 <a href="{% url 'checkout' %}" class="btn btn-primary w-100 mb-2">Checkout</a>

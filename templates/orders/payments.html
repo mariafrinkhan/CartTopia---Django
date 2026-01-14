@@ -65,11 +65,29 @@
                                         <label for="">{{cart_item.quantity}}</label>
                                     </td>
                                     <td>
-                                        <div class="price-wrap">
-                                            <var class="price">TK. {{ cart_item.sub_total }}</var>
-                                            <small class="text-muted">TK. {{ cart_item.product.price }} each</small>
-                                        </div> <!-- price-wrap .// -->
-                                    </td>
+  <div class="price-wrap">
+    <var class="price">
+      TK. {{ cart_item.sub_total|floatformat:2 }}
+    </var>
+
+    {% if cart_item.product.discount_percent > 0 %}
+      <small class="text-muted">
+        <span style="color:red; text-decoration: line-through; font-size: 0.85em;">
+          TK. {{ cart_item.product.price|floatformat:2 }}
+        </span>
+        →
+        <span style="color:green; font-weight:600;">
+          TK. {{ cart_item.discounted_price|floatformat:2 }} (each)
+        </span>
+        ({{ cart_item.product.discount_percent }}% OFF)
+      </small>
+    {% else %}
+      <small class="text-muted">
+        TK. {{ cart_item.product.price|floatformat:2 }} each
+      </small>
+    {% endif %}
+  </div>
+</td>
 
                                 </tr>
                                 {% endfor %}
@@ -112,3 +130,14 @@
 <!-- ========================= SECTION CONTENT END// ========================= -->
 
 {% endblock %}
+
+
+
+
+
+
+
+
+
+
+

@@ -38,9 +38,32 @@
 			</span>
 	</div>
 
-                <div class="mb-3">
-                  <var class="price h4">TK. {{ single_product.price }}</var>
-                </div>
+                {% if single_product.discount_percent > 0 %}
+    <span style="color: green; font-weight: bold; font-size: 1.2em;">
+        TK. {{ single_product.get_discounted_price|floatformat:2 }}
+    </span>
+    <span style="color: red; font-size: 0.9em; text-decoration: line-through; margin-left: 8px;">
+        TK. {{ single_product.price|floatformat:2 }}
+    </span>
+    <span style="color: #ff6600; font-weight: bold; margin-left: 5px;">
+        ({{ single_product.discount_percent }}% off)
+    </span>
+{% else %}
+    <span style="color: black; font-weight: bold;">
+        TK. {{ single_product.price|floatformat:2 }}
+    </span>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+
 
                 <p>{{ single_product.description }}</p>
 
