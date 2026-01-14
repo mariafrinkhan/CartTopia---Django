@@ -58,20 +58,30 @@
                             <input type="text" class="form-control" value="{{ cart_item.quantity }}" readonly />
                             <div class="input-group-append">
                               <form action="{% url 'add_cart' cart_item.product.id %}" method="POST">
-                                {% csrf_token %}  
-                                {% for item in cart_item.variations.all %}
-                                  <input type="hidden" name="{{ item.variation_category|lower }}" value="{{ item.variation_value|capfirst }}" />
-                                {% endfor %}
-                                <button class="btn btn-light" type="submit" id="button-minus"><i class="fa fa-plus"></i></button>
+                                  {% csrf_token %}  
+
+                                  {% for item in cart_item.variations.all %}
+                                    <input type="hidden" name="{{ item.variation_category|lower }}" value="{{ item.variation_value|capfirst }}" />
+                                  {% endfor %}
+
+                                  <button class="btn btn-light" type="submit" id="button-plus"
+                                      {% if cart_item.quantity >= cart_item.product.stock %}
+                                          disabled
+                                      {% endif %}
+                                  >
+                                      <i class="fa fa-plus"></i>
+                                  </button>
                               </form>
+
+
                             </div>
                           </div> <!-- input-group.// -->
                         </div> <!-- col.// -->
                       </td>
                       <td>
                         <div class="price-wrap">
-                          <var class="price">${{ cart_item.sub_total }}</var>
-                          <small class="text-muted">${{ cart_item.product.price }} each</small>
+                          <var class="price">TK. {{ cart_item.sub_total }}</var>
+                          <small class="text-muted">TK. {{ cart_item.product.price }} each</small>
                         </div> <!-- price-wrap .// -->
                       </td>
                       <td class="text-right">
@@ -88,20 +98,19 @@
               <div class="card-body">
                 <dl class="dlist-align">
                   <dt>Total price:</dt>
-                  <dd class="text-right">${{ total }}</dd>
+                  <dd class="text-right">TK. {{ total }}</dd>
                 </dl>
                 <dl class="dlist-align">
                   <dt>Tax:</dt>
-                  <dd class="text-right">${{ tax }}</dd>
+                  <dd class="text-right">TK. {{ tax }}</dd>
                 </dl>
+                
                 <dl class="dlist-align">
                   <dt>Grand Total:</dt>
-                  <dd class="text-right text-dark b"><strong>{{ grand_total }}</strong></dd>
+                  <dd class="text-right text-dark b"><strong>TK. {{ grand_total }}</strong></dd>
                 </dl>
                 <hr />
-                <p class="text-center mb-3">
-                  <img src="{% static './images/misc/payments.png' %}" height="26" />
-                </p>
+                
                 <a href="{% url 'checkout' %}" class="btn btn-primary w-100 mb-2">Checkout</a>
                 <a href="{% url 'store' %}" class="btn btn-light w-100">Continue Shopping</a>
               </div> <!-- card-body.// -->
@@ -113,4 +122,12 @@
     </div> <!-- container .// -->
   </section>
   <!-- ========================= SECTION CONTENT END// ========================= -->
+
+  <script>
+  function setDelivery(area) {
+    fetch(`/set-delivery-area/?area=${area}`)
+      .then(() => location.reload());
+  }
+</script>
+
 {% endblock %}

@@ -21,6 +21,22 @@ class Order(models.Model):
         ('Cancelled', 'Cancelled'),
     )
 
+    DELIVERY_CHOICES = [
+        ("inside", "Inside Dhaka"),
+        ("outside", "Outside Dhaka"),
+    ]
+
+    delivery_area = models.CharField(
+        max_length=20,
+        choices=DELIVERY_CHOICES,
+        default="inside"
+    )
+    delivery_charge = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=80
+    )
+
     user = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True)
     payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, blank=True, null=True)
     order_number = models.CharField(max_length=20)

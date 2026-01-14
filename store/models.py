@@ -3,6 +3,8 @@ from django.urls import reverse
 from category.models import Category
 from accounts.models import Account
 from django.db.models import Avg, Count
+from django.db.models import UniqueConstraint
+from django.db.models.functions import Lower
 
 # Create your models here.
 class Product(models.Model):
@@ -36,6 +38,11 @@ class Product(models.Model):
         if reviews['count'] is not None:
             count = int(reviews['count'])
         return count
+    
+    def save(self, *args, **kwargs):
+        self.is_available = bool(self.stock and self.stock > 0)
+        super().save(*args, **kwargs)
+
 
 class VariationManager(models.Manager):
     def colors(self):
@@ -60,8 +67,34 @@ class Variation(models.Model):
 
     objects= VariationManager()  
 
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                Lower('variation_value'),
+                'product',
+                'variation_category',
+                name='unique_variation_value_per_product_and_category'
+            )
+        ]
+
     def __str__(self):
         return self.variation_value
+
+# class Variation(models.Model):
+#     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variations')
+#     variation_category = models.CharField(max_length=100, choices=variation_category_choice)
+#     variation_value = models.CharField(max_length=100)
+#     stock = models.PositiveIntegerField(default=0)  # <-- stock per variation
+#     is_active = models.BooleanField(default=True)
+#     created_date = models.DateTimeField(auto_now=True)
+
+#     objects = VariationManager()
+
+#     class Meta:
+#         unique_together = ('product', 'variation_category', 'variation_value')  # no duplicates
+
+#     def __str__(self):
+#         return f"{self.product.product_name} - {self.variation_category}: {self.variation_value}"
     
 class ReviewRating(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -76,3 +109,14 @@ class ReviewRating(models.Model):
 
     def __str__(self):
         return self.subject
+    
+class ProductGallery(models.Model):
+    product = models.ForeignKey(Product, default=None, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='store/products', max_length=255)
+
+    def __str__(self):
+        return self.product.product_name
+
+    class Meta:
+        verbose_name = 'productgallery'
+        verbose_name_plural = 'product gallery'

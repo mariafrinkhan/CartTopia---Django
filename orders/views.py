@@ -1,4 +1,6 @@
 import datetime
+from decimal import Decimal
+from django.contrib import messages
 import json
 from django.shortcuts import redirect, render
 from django.http import HttpResponse, JsonResponse
@@ -23,24 +25,44 @@ def payments(request):
     return render(request, 'orders/payments.html')
 
 
-def place_order(request, total=0, quantity=0):
+
+
+def place_order(request):
     current_user = request.user
 
-    # If the cart count is less than or equal to 0, redirect back to store
-    cart_items = CartItem.objects.filter(user=current_user)
-    if cart_items.count() <= 0:
+    # Get cart items
+    cart_items = CartItem.objects.filter(user=current_user, is_active=True)
+    if not cart_items.exists():
+        messages.error(request, "Your cart is empty!")
         return redirect('store')
 
-    # Calculate totals
-    for cart_item in cart_items:
-        total += cart_item.product.price * cart_item.quantity
-        quantity += cart_item.quantity
-    tax = (2 * total) / 100
-    grand_total = total + tax
+    # Calculate total and quantity
+    total = sum(Decimal(item.product.price) * item.quantity for item in cart_items)
+    quantity = sum(item.quantity for item in cart_items)
+    tax = total * Decimal('0.02')  # 2% tax
+
+    # Default delivery
+    delivery_area = "inside"
+    DELIVERY_CHARGES = {
+        "inside": Decimal('80'),
+        "outside": Decimal('140')
+    }
+    delivery_charge = DELIVERY_CHARGES[delivery_area]
+
+    grand_total = total + tax + delivery_charge
 
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
+            # Get delivery area from form
+            delivery_area = form.cleaned_data.get('delivery_area', 'inside')
+            if delivery_area not in DELIVERY_CHARGES:
+                delivery_area = 'inside'
+            delivery_charge = DELIVERY_CHARGES[delivery_area]
+
+            # Recalculate grand total
+            grand_total = total + tax + delivery_charge
+
             # Create order
             order = Order.objects.create(
                 user=current_user,
@@ -53,9 +75,11 @@ def place_order(request, total=0, quantity=0):
                 country=form.cleaned_data['country'],
                 state=form.cleaned_data['state'],
                 city=form.cleaned_data['city'],
-                order_note=form.cleaned_data['order_note'],
+                order_note=form.cleaned_data.get('order_note', ''),
                 order_total=grand_total,
                 tax=tax,
+                delivery_area=delivery_area,
+                delivery_charge=delivery_charge,
                 ip=request.META.get('REMOTE_ADDR'),
             )
 
@@ -69,10 +93,17 @@ def place_order(request, total=0, quantity=0):
                 'cart_items': cart_items,
                 'total': total,
                 'tax': tax,
+                'delivery_charge': delivery_charge,
                 'grand_total': grand_total,
+                'delivery_area': delivery_area,
             }
+
             return render(request, 'orders/payments.html', context)
-    return redirect('checkout')
+
+    else:
+        messages.error(request, "Invalid request!")
+        return redirect('checkout')
+
 
 
 def sslcommerz_payment(request, order_id):

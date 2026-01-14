@@ -56,6 +56,22 @@
                                     <label for="">Country</label>
                                     <input type="text" name="country" class="form-control" required>
                                 </div>
+                                <div class="form-row mt-3">
+    <label><strong>Delivery Area</strong></label>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="delivery_area" id="inside_dhaka" value="inside" checked>
+        <label class="form-check-label" for="inside_dhaka">
+            Inside Dhaka (TK. 80)
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="delivery_area" id="outside_dhaka" value="outside">
+        <label class="form-check-label" for="outside_dhaka">
+            Outside Dhaka (TK. 140)
+        </label>
+    </div>
+</div>
+
                             </div>
                             <div class="form-row">
                                 <label for="">Order Note</label>
@@ -104,8 +120,8 @@
                                     </td>
                                     <td>
                                         <div class="price-wrap">
-                                            <var class="price">${{ cart_item.sub_total }}</var>
-                                            <small class="text-muted">${{ cart_item.product.price }} each</small>
+                                            <var class="price">TK. {{ cart_item.sub_total }}</var>
+                                            <small class="text-muted">TK. {{ cart_item.product.price }} each</small>
                                         </div> <!-- price-wrap .// -->
                                     </td>
 

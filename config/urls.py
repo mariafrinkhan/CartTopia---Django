@@ -14,4 +14,7 @@ urlpatterns = [
 
     # ORDERS
     path('orders/', include('orders.urls')),
+
+    # # ADMIN HONEYPOT
+    # path('admin/', include('admin_honeypot.urls', namespace='admin_honeypot')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

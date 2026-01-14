@@ -17,10 +17,11 @@
     <!-- ========================= SECTION ========================= -->
     <section class="section-name padding-y-sm">
       <div class="container">
-        <header class="section-heading">
-          <a href="{%url 'store'%}" class="btn btn-outline-primary float-right">See all</a>
-          <h3 class="section-title">Popular products</h3>
-        </header>
+        <header class="section-heading d-flex justify-content-between align-items-center">
+    <h3 class="section-title mb-0">Popular products</h3>
+    <a href="{% url 'store' %}" class="btn btn-outline-primary">See all</a>
+</header>
+
         <!-- sect-heading -->
 
         <div class="row">
@@ -30,8 +31,36 @@
               <a href="{{product.get_url}}" class="img-wrap"><img src="{{product.images.url}}" /></a>
               <figcaption class="info-wrap">
                 <a href="{{product.get_url}}" class="title">{{product.product_name}}</a>
-                <div class="price mt-1">{{product.price}}</div> <!-- price-wrap.// -->
-              </figcaption>
+                <div class="price mt-1">TK. {{product.price}}</div> <!-- price-wrap.// -->
+                <div class="rating-star">
+		<span>
+			<i class="fa fa-star{% if product.averageReview < 0.5 %}-o{% elif product.averageReview >= 0.5 and product.averageReview < 1 %}-half-o {% endif %}" aria-hidden="true"></i>
+			<i class="fa fa-star{% if product.averageReview < 1.5 %}-o{% elif single_product.averageReview >= 1.5 and product.averageReview < 2 %}-half-o {% endif %}" aria-hidden="true"></i>
+			<i class="fa fa-star{% if product.averageReview < 2.5 %}-o{% elif single_product.averageReview >= 2.5 and product.averageReview < 3 %}-half-o {% endif %}" aria-hidden="true"></i>
+			<i class="fa fa-star{% if product.averageReview < 3.5 %}-o{% elif single_product.averageReview >= 3.5 and product.averageReview < 4 %}-half-o {% endif %}" aria-hidden="true"></i>
+			<i class="fa fa-star{% if product.averageReview < 4.5 %}-o{% elif single_product.averageReview >= 4.5 and product.averageReview < 5 %}-half-o {% endif %}" aria-hidden="true"></i>
+	
+			</span>
+	</div>
+</figcaption>
+
+
+
+
+
+{% if product.stock <= 0 %}
+    <h5 class="text-danger text-center">Out of Stock</h5>
+{% else %}
+    <a href="{{ product.get_url }}" class="btn btn-primary">
+        View Details
+    </a>
+{% endif %}
+
+
+
+
+
+
             </div>
           </div> <!-- col.// -->
           {%  endfor %}
