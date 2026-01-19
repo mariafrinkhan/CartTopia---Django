@@ -126,7 +126,7 @@ def sslcommerz_payment(request, order_id):
         'product_profile': 'general',
     }
 
-    response = requests.post(url, data=payload)
+    response = requests.post(url, data=payload, verify=False)
     data = response.json()
     return redirect(data.get('GatewayPageURL', '/store/'))
 

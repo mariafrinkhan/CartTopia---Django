@@ -1,12 +1,117 @@
 from django.contrib import admin
-from django.db.models import Sum, Q, F, Avg, Count, Max, OuterRef, Subquery
+from django.db.models import Sum, F, Avg, Max, OuterRef, Subquery
 from django.utils.timezone import now
 from datetime import timedelta, datetime
 
 from rangefilter.filters import DateRangeFilter
 
 from .models import ProductReport, SalesSummary, ReviewRatingReport, TopCustomerReport, LowStockReport
-from orders.models import Order, OrderProduct
+from orders.models import OrderProduct
+from django import forms
+
+
+
+
+from django.contrib import admin
+from django.db.models import Sum, F
+from datetime import datetime
+from orders.models import OrderProduct
+from .models import SalesSummary
+
+# -------------------------
+# Custom Year Filter
+# -------------------------
+class YearListFilter(admin.SimpleListFilter):
+    title = 'Year'
+    parameter_name = 'year'
+
+    def lookups(self, request, model_admin):
+        # Last 5 years dynamically
+        current_year = datetime.now().year
+        return [(str(y), str(y)) for y in range(current_year, current_year - 5, -1)]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            request.selected_year = int(self.value())
+        return queryset
+
+
+# -------------------------
+# Custom Month Filter
+# -------------------------
+class MonthListFilter(admin.SimpleListFilter):
+    title = 'Month'
+    parameter_name = 'month'
+
+    MONTHS = [
+        (1, 'January'), (2, 'February'), (3, 'March'),
+        (4, 'April'), (5, 'May'), (6, 'June'),
+        (7, 'July'), (8, 'August'), (9, 'September'),
+        (10, 'October'), (11, 'November'), (12, 'December')
+    ]
+
+    def lookups(self, request, model_admin):
+        return self.MONTHS  # <--- fixed reference
+
+    def queryset(self, request, queryset):
+        if self.value():
+            request.selected_month = int(self.value())
+        return queryset
+
+
+# -------------------------
+# SalesSummary Admin
+# -------------------------
+@admin.register(SalesSummary)
+class SalesSummaryAdmin(admin.ModelAdmin):
+    list_display = ('title', 'total_items_sold', 'total_revenue')
+    list_filter = (YearListFilter, MonthListFilter)  # sidebar filters
+
+    # Capture request to access selected year/month
+    def get_queryset(self, request):
+        self.request = request
+        return super().get_queryset(request)
+
+    # Filter OrderProduct dynamically
+    def _filtered_orders(self):
+        qs = OrderProduct.objects.all()
+        req = getattr(self, 'request', None)
+        if not req:
+            return qs
+
+        # filter by selected year
+        selected_year = getattr(req, 'selected_year', None)
+        if selected_year:
+            qs = qs.filter(created_at__year=selected_year)
+
+        # filter by selected month
+        selected_month = getattr(req, 'selected_month', None)
+        if selected_month:
+            qs = qs.filter(created_at__month=selected_month)
+
+        return qs
+
+    # Totals
+    def total_items_sold(self, obj):
+        return self._filtered_orders().aggregate(total=Sum('quantity'))['total'] or 0
+
+    def total_revenue(self, obj):
+        return self._filtered_orders().aggregate(
+            total=Sum(F('product_price') * F('quantity'))
+        )['total'] or 0
+
+    # Read-only
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+
+
+
+
 
 
 # =========================
@@ -66,60 +171,60 @@ class ProductReportAdmin(admin.ModelAdmin):
 # =========================
 # SALES SUMMARY (Overall business report)
 # =========================
-@admin.register(SalesSummary)
-class SalesSummaryAdmin(admin.ModelAdmin):
-    list_display = (
-        'title',
-        'total_items_sold',
-        'total_revenue',
-        'sold_this_week',
-        'sold_this_month',
-        'sold_this_year',
-    )
+# @admin.register(SalesSummary)
+# class SalesSummaryAdmin(admin.ModelAdmin):
+#     list_display = (
+#         'title',
+#         'total_items_sold',
+#         'total_revenue',
+#         'sold_this_week',
+#         'sold_this_month',
+#         'sold_this_year',
+#     )
 
-    # -----------------------
-    # Totals
-    # -----------------------
-    def total_items_sold(self, obj):
-        return OrderProduct.objects.aggregate(
-            total=Sum('quantity')
-        )['total'] or 0
+#     # -----------------------
+#     # Totals
+#     # -----------------------
+#     def total_items_sold(self, obj):
+#         return OrderProduct.objects.aggregate(
+#             total=Sum('quantity')
+#         )['total'] or 0
 
-    def total_revenue(self, obj):
-        # Multiply price * quantity for revenue
-        return OrderProduct.objects.aggregate(
-            total=Sum(F('product_price') * F('quantity'))
-        )['total'] or 0
+#     def total_revenue(self, obj):
+#         # Multiply price * quantity for revenue
+#         return OrderProduct.objects.aggregate(
+#             total=Sum(F('product_price') * F('quantity'))
+#         )['total'] or 0
 
-    # -----------------------
-    # Sold in specific periods
-    # -----------------------
-    def sold_this_week(self, obj):
-        start = now() - timedelta(days=7)
-        return OrderProduct.objects.filter(
-            created_at__gte=start
-        ).aggregate(total=Sum('quantity'))['total'] or 0
+#     # -----------------------
+#     # Sold in specific periods
+#     # -----------------------
+#     def sold_this_week(self, obj):
+#         start = now() - timedelta(days=7)
+#         return OrderProduct.objects.filter(
+#             created_at__gte=start
+#         ).aggregate(total=Sum('quantity'))['total'] or 0
 
-    def sold_this_month(self, obj):
-        start = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return OrderProduct.objects.filter(
-            created_at__gte=start
-        ).aggregate(total=Sum('quantity'))['total'] or 0
+#     def sold_this_month(self, obj):
+#         start = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+#         return OrderProduct.objects.filter(
+#             created_at__gte=start
+#         ).aggregate(total=Sum('quantity'))['total'] or 0
 
-    def sold_this_year(self, obj):
-        start = now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-        return OrderProduct.objects.filter(
-            created_at__gte=start
-        ).aggregate(total=Sum('quantity'))['total'] or 0
+#     def sold_this_year(self, obj):
+#         start = now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+#         return OrderProduct.objects.filter(
+#             created_at__gte=start
+#         ).aggregate(total=Sum('quantity'))['total'] or 0
 
-    # -----------------------
-    # Make admin clean (read-only)
-    # -----------------------
-    def has_add_permission(self, request):
-        return False
+#     # -----------------------
+#     # Make admin clean (read-only)
+#     # -----------------------
+#     def has_add_permission(self, request):
+#         return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+#     def has_delete_permission(self, request, obj=None):
+#         return False
 
 
 
