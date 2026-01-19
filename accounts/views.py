@@ -72,77 +72,160 @@ def register(request):
     return render(request, "accounts/register.html", context)
 
 
+# def login(request):
+#     if request.method == "POST":
+#         email = request.POST.get("email")
+#         password = request.POST.get("password")
+
+#         user = auth.authenticate(email=email, password=password)
+#         if user is not None:
+#             try:
+#                 cart = Cart.objects.get(cart_id=_cart_id(request))
+#                 cart_items = CartItem.objects.filter(cart=cart)
+
+#                 for item in cart_items:
+#                     product = item.product
+#                     variations = list(item.variations.all())
+
+#                     # quantity already in user's cart (same product, any variation)
+#                     user_cart_qty = CartItem.objects.filter(
+#                         user=user,
+#                         product=product
+#                     ).aggregate(total=Sum('quantity'))['total'] or 0
+
+#                     remaining_stock = product.stock - user_cart_qty
+
+#                     if remaining_stock <= 0:
+#                         # no stock left → drop anonymous item
+#                         item.delete()
+#                         continue
+
+#                     # check if same variation already exists for user
+#                     existing_items = CartItem.objects.filter(
+#                         user=user,
+#                         product=product
+#                     )
+
+#                     merged = False
+#                     for ex_item in existing_items:
+#                         if list(ex_item.variations.all()) == variations:
+#                             ex_item.quantity += min(item.quantity, remaining_stock)
+#                             ex_item.save()
+#                             merged = True
+#                             item.delete()
+#                             break
+
+#                     if not merged:
+#                         item.quantity = min(item.quantity, remaining_stock)
+#                         item.user = user
+#                         item.cart = None
+#                         item.save()
+
+#             except Cart.DoesNotExist:
+#                 pass
+
+#             auth.login(request, user)
+#             messages.success(request, "You are now logged in.")
+
+#             url = request.META.get("HTTP_REFERER")
+#             try:
+#                 query = requests.utils.urlparse(url).query
+#                 params = dict(x.split("=") for x in query.split("&"))
+#                 if "next" in params:
+#                     return redirect(params["next"])
+#             except:
+#                 pass
+
+#             return redirect("dashboard")
+
+#         else:
+#             messages.error(request, "Invalid login credentials")
+#             return redirect("login")
+
+#     return render(request, "accounts/login.html")
+
+MAX_PER_PRODUCT = 10  # Max items per product allowed in cart
+
 def login(request):
     if request.method == "POST":
         email = request.POST.get("email")
         password = request.POST.get("password")
 
         user = auth.authenticate(email=email, password=password)
-        if user is not None:
-            try:
-                cart = Cart.objects.get(cart_id=_cart_id(request))
-                cart_items = CartItem.objects.filter(cart=cart)
-
-                for item in cart_items:
-                    product = item.product
-                    variations = list(item.variations.all())
-
-                    # quantity already in user's cart (same product, any variation)
-                    user_cart_qty = CartItem.objects.filter(
-                        user=user,
-                        product=product
-                    ).aggregate(total=Sum('quantity'))['total'] or 0
-
-                    remaining_stock = product.stock - user_cart_qty
-
-                    if remaining_stock <= 0:
-                        # no stock left → drop anonymous item
-                        item.delete()
-                        continue
-
-                    # check if same variation already exists for user
-                    existing_items = CartItem.objects.filter(
-                        user=user,
-                        product=product
-                    )
-
-                    merged = False
-                    for ex_item in existing_items:
-                        if list(ex_item.variations.all()) == variations:
-                            ex_item.quantity += min(item.quantity, remaining_stock)
-                            ex_item.save()
-                            merged = True
-                            item.delete()
-                            break
-
-                    if not merged:
-                        item.quantity = min(item.quantity, remaining_stock)
-                        item.user = user
-                        item.cart = None
-                        item.save()
-
-            except Cart.DoesNotExist:
-                pass
-
-            auth.login(request, user)
-            messages.success(request, "You are now logged in.")
-
-            url = request.META.get("HTTP_REFERER")
-            try:
-                query = requests.utils.urlparse(url).query
-                params = dict(x.split("=") for x in query.split("&"))
-                if "next" in params:
-                    return redirect(params["next"])
-            except:
-                pass
-
-            return redirect("dashboard")
-
-        else:
+        if user is None:
             messages.error(request, "Invalid login credentials")
             return redirect("login")
 
+        # ---------- MERGE GUEST CART ----------
+        try:
+            cart = Cart.objects.get(cart_id=_cart_id(request))
+            guest_items = CartItem.objects.filter(cart=cart, is_active=True)
+
+            for item in guest_items:
+                product = item.product
+                variations = list(item.variations.all())
+
+                # total quantity already in user's cart (all variations)
+                user_total_qty = (
+                    CartItem.objects
+                    .filter(user=user, product=product, is_active=True)
+                    .aggregate(total=Sum("quantity"))["total"] or 0
+                )
+
+                # compute how many we can add
+                remaining_stock = product.stock - user_total_qty
+                remaining_limit = MAX_PER_PRODUCT - user_total_qty
+                allowed_qty = min(remaining_stock, remaining_limit)
+
+                if allowed_qty <= 0:
+                    # cannot add any → delete guest item
+                    item.delete()
+                    continue
+
+                # check if same variation already exists
+                existing_items = CartItem.objects.filter(
+                    user=user, product=product, is_active=True
+                )
+
+                merged = False
+                for ex_item in existing_items:
+                    if list(ex_item.variations.all()) == variations:
+                        qty_to_add = min(item.quantity, allowed_qty)
+                        ex_item.quantity += qty_to_add
+                        ex_item.save()
+                        item.delete()
+                        merged = True
+                        break
+
+                if not merged:
+                    # assign item to user
+                    qty_to_add = min(item.quantity, allowed_qty)
+                    item.quantity = qty_to_add
+                    item.user = user
+                    item.cart = None
+                    item.save()
+
+        except Cart.DoesNotExist:
+            pass
+
+        # ---------- LOGIN ----------
+        auth.login(request, user)
+        messages.success(request, "You are now logged in.")
+
+        # redirect logic
+        url = request.META.get("HTTP_REFERER")
+        try:
+            query = requests.utils.urlparse(url).query
+            params = dict(x.split("=") for x in query.split("&"))
+            if "next" in params:
+                return redirect(params["next"])
+        except:
+            pass
+
+        return redirect("dashboard")
+
     return render(request, "accounts/login.html")
+
 
 
 @login_required(login_url="login")
