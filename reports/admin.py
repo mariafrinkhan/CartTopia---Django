@@ -59,12 +59,13 @@ class MonthListFilter(admin.SimpleListFilter):
         return queryset
 
 
+
 # -------------------------
 # SalesSummary Admin
 # -------------------------
 @admin.register(SalesSummary)
 class SalesSummaryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'total_items_sold', 'total_revenue')
+    list_display = ('title', 'total_items_sold', 'total_revenue_bdt', 'total_cancellations', 'total_refund_bdt')
     list_filter = (YearListFilter, MonthListFilter)  # sidebar filters
 
     # Capture request to access selected year/month
@@ -95,10 +96,23 @@ class SalesSummaryAdmin(admin.ModelAdmin):
     def total_items_sold(self, obj):
         return self._filtered_orders().aggregate(total=Sum('quantity'))['total'] or 0
 
-    def total_revenue(self, obj):
-        return self._filtered_orders().aggregate(
+    def total_revenue_bdt(self, obj):
+        total = self._filtered_orders().aggregate(
             total=Sum(F('product_price') * F('quantity'))
         )['total'] or 0
+        return f"BDT {total}"
+
+    def total_cancellations(self, obj):
+        cancelled_orders = self._filtered_orders().filter(order__status='Cancelled')
+        return cancelled_orders.count()
+
+    def total_refund_bdt(self, obj):
+        # Sum price * qty for cancelled orders
+        cancelled_orders = self._filtered_orders().filter(order__status='Cancelled')
+        total_refund = cancelled_orders.aggregate(
+            total=Sum(F('product_price') * F('quantity'))
+        )['total'] or 0
+        return f"BDT {total_refund}"
 
     # Read-only
     def has_add_permission(self, request):
@@ -106,6 +120,7 @@ class SalesSummaryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
 
 
 

@@ -10,6 +10,9 @@ urlpatterns = [
     path('ssl-fail/', views.ssl_fail, name='ssl_fail'),
     path('ssl-cancel/', views.ssl_cancel, name='ssl_cancel'),
     path('after-order-login/<str:order_number>/', views.after_order_login, name='after_order_login'),
+    path('cancel_order/<str:order_number>/', views.cancel_order, name='cancel_order'),
+    path('order_detail/<str:order_number>/', views.order_detail, name='order_detail'),
+    path('my_orders/', views.my_orders, name='my_orders'),
 
 
 ]

@@ -15,9 +15,8 @@ class Payment(models.Model):
     
 class Order(models.Model):
     STATUS = (
-        ('New', 'New'),
         ('Accepted', 'Accepted'),
-        ('Completed', 'Completed'),
+        ('Delivered', 'Delivered'),
         ('Cancelled', 'Cancelled'),
     )
 
@@ -52,11 +51,21 @@ class Order(models.Model):
     order_note = models.TextField(blank=True)
     order_total = models.FloatField()
     tax = models.FloatField()
-    status = models.CharField(max_length=10, choices=STATUS, default='New')
+    status = models.CharField(max_length=10, choices=STATUS, default='Accepted')
     ip = models.CharField(blank=True, max_length=20)
     is_ordered = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    estimated_delivery = models.DateField(blank=True, null=True)
+    cancellation_reason = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.estimated_delivery and self.status == 'Accepted':
+            # Example: delivery 5 days for inside Dhaka, 7 for outside
+            from datetime import timedelta, date
+            days = 5 if self.delivery_area == 'inside' else 7
+            self.estimated_delivery = date.today() + timedelta(days=days)
+        super().save(*args, **kwargs)
 
     def full_name(self):
         return f'{self.first_name} {self.last_name}'

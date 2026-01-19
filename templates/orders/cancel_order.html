@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container" style="margin: 50px auto; max-width: 70%; background: #f9f9f9; padding: 30px;">
+    <h2>Cancel Order #{{ order.order_number }}</h2>
+    <p><strong>Status:</strong> 
+        {% if order.status == "Accepted" %}
+            <span class="badge bg-primary">{{ order.status }}</span>
+        {% elif order.status == "Delivered" %}
+            <span class="badge bg-success">{{ order.status }}</span>
+        {% else %}
+            <span class="badge bg-danger">{{ order.status }}</span>
+        {% endif %}
+    </p>
+    <p><strong>Estimated Delivery:</strong> {{ order.estimated_delivery|default:"N/A" }}</p>
+
+    <h4>Products</h4>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Variations</th>
+                <th>Quantity</th>
+                <th>Price (each)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order_detail %}
+            <tr>
+                <td>{{ item.product.product_name }}</td>
+                <td>
+                    {% for v in item.variations.all %}
+                        {{ v.variation_category|capfirst }}: {{ v.variation_value|capfirst }}<br>
+                    {% empty %} N/A {% endfor %}
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>BDT {{ item.product_price|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h4>Summary</h4>
+    <p>Subtotal: BDT {{ subtotal|floatformat:2 }}</p>
+    <p>Tax: BDT {{ order.tax|floatformat:2 }}</p>
+    <p>Delivery Charge: BDT {{ order.delivery_charge|floatformat:2 }}</p>
+    <p><strong>Grand Total: BDT {{ order.order_total|floatformat:2 }}</strong></p>
+
+    <h4>Cancel Reason (optional)</h4>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <textarea name="cancel_reason" class="form-control" rows="3" placeholder="Reason for cancellation (optional)"></textarea>
+        </div>
+        <button type="submit" class="btn btn-danger mt-3">Cancel Order</button>
+        <a href="{% url 'order_detail' order_number=order.order_number %}" class="btn btn-secondary mt-3">Go Back</a>
+    </form>
+</div>
+{% endblock %}

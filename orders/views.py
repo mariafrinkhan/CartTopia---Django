@@ -16,6 +16,7 @@ from store.models import Product
 import requests
 from django.conf import settings
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 
 
 def payments(request):
@@ -243,3 +244,81 @@ def after_order_login(request, order_number):
     login(request, user)
 
     return redirect('store')
+
+
+
+
+@login_required
+def order_detail(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
+    order_products = OrderProduct.objects.filter(order=order)
+    subtotal = sum([p.product_price * p.quantity for p in order_products])
+
+    context = {
+        'order': order,
+        'order_detail': order_products,
+        'subtotal': subtotal,
+    }
+    return render(request, 'accounts/order_detail.html', context)
+
+
+@login_required
+def cancel_order(request, order_number):
+    # Get the order and its products
+    order = get_object_or_404(Order, order_number=order_number, user=request.user)
+    order_products = OrderProduct.objects.filter(order=order)
+
+    if request.method == 'POST':
+        cancel_reason = request.POST.get('cancel_reason', '').strip()
+
+        if order.status not in ['Cancelled', 'Delivered']:
+            # 1️⃣ Update order status
+            order.status = 'Cancelled'
+            if cancel_reason:
+                order.order_note = f"Cancelled by user: {cancel_reason}"
+            order.save()
+
+            # 2️⃣ Restock products
+            for item in order_products:
+                item.product.stock += item.quantity
+                item.product.save()
+
+            # 3️⃣ Update payment status if exists
+            if hasattr(order, 'payment') and order.payment:
+                order.payment.status = "Refunded"
+                order.payment.save()
+
+            messages.success(request, "Your order has been cancelled and payment marked as refunded!")
+
+        else:
+            messages.info(request, "Order cannot be cancelled (either already cancelled or delivered).")
+
+        # Redirect to order detail page after cancellation
+        return redirect('order_detail', order_number=order.order_number)
+
+    # GET request → show cancel_order page
+    subtotal = sum([p.product_price * p.quantity for p in order_products])
+    context = {
+        'order': order,
+        'order_detail': order_products,
+        'subtotal': subtotal,
+    }
+    return render(request, 'orders/cancel_order.html', context)
+
+
+@login_required
+def my_orders(request):
+    status = request.GET.get('status')  # get the query param
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+
+    if status:
+        orders = orders.filter(status=status)
+
+    context = {
+        'orders': orders,
+        'current_status': status,
+    }
+    return render(request, 'accounts/my_orders.html', context)
+
+
+

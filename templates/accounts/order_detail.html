@@ -12,9 +12,10 @@
                         <!-- Logo -->
                         <div class="col-lg-6">
                             <div class="invoice-logo">
-                                <img src="{% static '/images/logo.png' %}" alt="Invoice logo" style="max-height: 40px;">
+                                <img src="{% static 'images/logo.png' %}" alt="Invoice logo" style="max-height: 40px;">
                             </div>
                         </div>
+
                         <!-- Invoiced To -->
                         <div class="col-lg-6">
                             <div class="invoice-from">
@@ -34,12 +35,33 @@
                                 <div class="well">
                                     <ul class="list-unstyled mb0">
                                         <li><strong>Order</strong> #{{ order.order_number }}</li>
-                                        <li><strong>Transaction ID</strong> {{ order.payment.payment_id }}</li>
-                                        <li><strong>Order Date:</strong> {{ order.created_at }}</li>
-                                        <li><strong>Status:</strong> {{ order.payment.status }}</li>
+                                        <li><strong>Transaction ID:</strong> {{ order.payment.payment_id }}</li>
+                                        <li><strong>Order Date:</strong> {{ order.created_at|date:"d M Y" }}</li>
+                                        <li><strong>Status:</strong> 
+                                            {% if order.status == 'Accepted' %}
+                                                <span class="badge bg-primary">{{ order.status }}</span>
+                                            {% elif order.status == 'Delivered' %}
+                                                <span class="badge bg-success">{{ order.status }}</span>
+                                            {% elif order.status == 'Cancelled' %}
+                                                <span class="badge bg-danger">{{ order.status }}</span>
+                                            {% endif %}
+                                        </li>
+                                        {% if order.estimated_delivery %}
+                                        <li><strong>Estimated Delivery:</strong> {{ order.estimated_delivery|date:"d M Y" }}</li>
+                                        {% endif %}
                                     </ul>
                                 </div>
                             </div>
+
+                            <!-- Cancel Button -->
+                            {% if order.status == "Accepted" %}
+                                <a href="{% url 'cancel_order' order_number=order.order_number %}" class="btn btn-danger mt-3 mb-3">
+                                    Cancel Order
+                                </a> 
+                            {% endif %}
+
+                            
+                            
 
                             <!-- Products -->
                             <div class="invoice-items mt25">
@@ -53,36 +75,36 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                          {% for item in order_detail %}
+                                            {% for item in order_detail %}
                                             <tr>
                                                 <td>
                                                     {{ item.product.product_name }}
                                                     {% if item.variations.all %}
                                                         <p class="text-muted small mb-0">
-                                                        {% for v in item.variations.all %}
-                                                            {{ v.variation_category|capfirst }} : {{ v.variation_value|capfirst }} <br>
-                                                        {% endfor %}
+                                                            {% for v in item.variations.all %}
+                                                            {{ v.variation_category|capfirst }} : {{ v.variation_value|capfirst }}<br>
+                                                            {% endfor %}
                                                         </p>
                                                     {% endif %}
                                                 </td>
                                                 <td class="text-center">{{ item.quantity }}</td>
                                                 <td class="text-center">
                                                     {% if item.discount_percent|default:0 > 0 %}
-                                                        <span class="price-discount" style="color:green; font-weight:600; margin-left:5px;">
-                                                            BDT {{ item.product_price|floatformat:2 }} (each)
+                                                    <span class="price-discount" style="color:green; font-weight:600;">
+                                                        BDT {{ item.product_price|floatformat:2 }} (each)
                                                         </span>
                                                         <span class="price-original" style="color:red; text-decoration: line-through;">
                                                             BDT {{ item.original_price|floatformat:2 }}
                                                         </span>
-                                                        <div class="discount-percent" style="margin-left:5px;">
+                                                        <div class="discount-percent">
                                                             ({{ item.discount_percent }}% OFF)
                                                         </div>
-                                                    {% else %}
+                                                        {% else %}
                                                         BDT {{ item.product_price|floatformat:2 }}
                                                     {% endif %}
                                                 </td>
                                             </tr>
-                                          {% endfor %}
+                                            {% endfor %}
                                         </tbody>
                                         <tfoot>
                                             <tr>
@@ -105,11 +127,15 @@
                                     </table>
                                 </div>
                             </div>
-
+                            
                             <div class="invoice-footer mt25">
                                 <p class="text-center">Thank you for shopping with us!</p>
                             </div>
                         </div>
+                        <!-- Go Back Button -->
+                        <a href="{% url 'my_orders' %}" class="btn btn-secondary mt-3 mb-3">
+                            Go Back
+                        </a>
                     </div>
                 </div>
             </div>
