@@ -47,7 +47,7 @@ class YearListFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         current_year = datetime.now().year
-        return [(str(y), str(y)) for y in range(current_year, current_year - 5, -1)]
+        return [(str(y), str(y)) for y in range(current_year, current_year - 10, -1)]
 
     def queryset(self, request, queryset):
         if self.value():
