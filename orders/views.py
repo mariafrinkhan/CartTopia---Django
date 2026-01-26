@@ -44,7 +44,7 @@ def place_order(request):
     # Default delivery
     delivery_area = "inside"
     DELIVERY_CHARGES = {
-        "inside": Decimal('80'),
+        "inside": Decimal('60'),
         "outside": Decimal('140')
     }
     delivery_charge = DELIVERY_CHARGES[delivery_area]
@@ -272,18 +272,18 @@ def cancel_order(request, order_number):
         cancel_reason = request.POST.get('cancel_reason', '').strip()
 
         if order.status not in ['Cancelled', 'Delivered']:
-            # 1️⃣ Update order status
+            # Update order status
             order.status = 'Cancelled'
             if cancel_reason:
                 order.order_note = f"Cancelled by user: {cancel_reason}"
             order.save()
 
-            # 2️⃣ Restock products
+            # Restock products
             for item in order_products:
                 item.product.stock += item.quantity
                 item.product.save()
 
-            # 3️⃣ Update payment status if exists
+            # Update payment status if exists
             if hasattr(order, 'payment') and order.payment:
                 order.payment.status = "Refunded"
                 order.payment.save()

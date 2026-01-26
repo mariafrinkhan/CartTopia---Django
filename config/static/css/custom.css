@@ -59,3 +59,16 @@ ul.thumb li img{
   height: 80px;
   border: 1px solid grey;
 }
+
+.search-input {
+    background-color: #fefefe;
+    color: #333;
+    border: 2px solid #a9c8e7;
+    border-radius: 0.25rem; /* optional */
+}
+
+.search-btn {
+    background-color: #0051ff;
+    color: white;
+    border: none; /* optional */
+}

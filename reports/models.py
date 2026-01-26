@@ -1,6 +1,7 @@
 from django.db import models
-from store.models import Product
+from store.models import Product, ReviewRating
 from django.contrib.auth import get_user_model
+
 
 class ProductReport(Product):
     class Meta:
@@ -19,7 +20,6 @@ class SalesSummary(models.Model):
     def __str__(self):
         return self.title
     
-from store.models import ReviewRating
 
 # Proxy model for reporting
 class ReviewRatingReport(ReviewRating):

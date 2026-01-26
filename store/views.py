@@ -16,8 +16,8 @@ def store(request, category_slug=None):
 
     if category_slug != None:
         categories = get_object_or_404(Category, slug=category_slug)
-        products = Product.objects.filter(category=categories, is_available=True)
-        paginator = Paginator(products, 1)
+        products = Product.objects.filter(category=categories).order_by("-is_available")
+        paginator = Paginator(products, 3)
         page = request.GET.get("page")
         paged_products = paginator.get_page(page)
 
@@ -74,19 +74,53 @@ def product_detail(request, category_slug, product_slug):
     return render(request, "store/product_detail.html", context)
 
 
+
 def search(request):
-    if "keyword" in request.GET:
-        keyword = request.GET["keyword"]
-        if keyword:
-            products = Product.objects.order_by("-created_date").filter(
-                Q(description__icontains=keyword) | Q(product_name__icontains=keyword)
-            )
-            product_count = products.count()
+    keyword = request.GET.get("keyword", "").strip()
+
+    # If keyword is empty, redirect to previous page or homepage
+    if not keyword:
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    products = Product.objects.none()
+    product_count = 0
+
+    if len(keyword) >= 3:
+        queries = Q()
+
+        # Split the keyword into words
+        for word in keyword.split():
+            # Handle singular/plural form for simple 's' ending
+            if word.endswith('s') and len(word) > 1:
+                singular = word[:-1]
+                queries |= Q(product_name__icontains=word)
+                queries |= Q(product_name__icontains=singular)
+                queries |= Q(description__icontains=word)
+                queries |= Q(description__icontains=singular)
+            else:
+                plural = word + 's'
+                queries |= Q(product_name__icontains=word)
+                queries |= Q(product_name__icontains=plural)
+                queries |= Q(description__icontains=word)
+                queries |= Q(description__icontains=plural)
+
+        products = Product.objects.filter(queries).distinct().order_by("-is_available")
+        product_count = products.count()
+
+    # ===== Pagination =====
+    paginator = Paginator(products, 3)  # 3 products per page
+    page = request.GET.get('page')
+    paged_products = paginator.get_page(page)
+
     context = {
-        "products": products,
+        "products": paged_products,
         "product_count": product_count,
+        "keyword": keyword,
     }
+
     return render(request, "store/store.html", context)
+
+
 
 
 def submit_review(request, product_id):

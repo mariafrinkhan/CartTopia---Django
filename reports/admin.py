@@ -4,6 +4,7 @@ from django.utils.timezone import now
 from datetime import timedelta, datetime
 from django.http import HttpResponse
 import csv
+from orders.models import OrderProduct
 
 from rangefilter.filters import DateRangeFilter
 
@@ -14,7 +15,6 @@ from .models import (
     TopCustomerReport,
     LowStockReport,
 )
-from orders.models import OrderProduct
 
 
 # =====================================================
